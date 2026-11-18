@@ -1,6 +1,7 @@
 // TypeClash client: screens, race loop, input, effects, networking.
 import { TypingEngine, formatTime } from "./engine.js";
-import { pickParagraph, normalizeDiff } from "./paragraphs.js";
+import { normalizeDiff } from "./paragraphs.js";
+import { generateText } from "./textgen.js";
 import { Net } from "./net.js";
 import { Bot, BOT_LEVELS } from "./bot.js";
 import { FX, Background, REDUCED, pop, shake, flash, countUp } from "./fx.js";
@@ -399,7 +400,7 @@ net.on("match", (m) => {
     oppCard: m.opp.card,
     label: `${m.ranked ? "Ranked" : m.chaos ? (m.friendly ? `Chaos · Room ${m.code}` : "Chaos") : m.friendly ? `Room ${m.code}` : "Casual"} · ${m.topic ? m.topic : cap(m.diff)}`,
   });
-  if (app.askedTopic && m.src === "bank") toast("The AI paragraph was unavailable, so this race uses a classic one.", true);
+  if (app.askedTopic && m.src !== "ai") toast("The AI paragraph was unavailable, so this race uses a fresh general one.", true);
   app.askedTopic = false;
 });
 
@@ -484,24 +485,62 @@ async function startBot() {
 }
 
 // ---- AI paragraphs (solo / bot): ask the server, which asks DeepSeek ----------
-/** Classic paragraph, or an AI one when a topic is typed. Returns null if the player cancelled. */
+/** A paragraph about the typed topic (AI), or a fresh never-used one. Returns null if the player cancelled. */
 async function pickText() {
   const topic = app.ai ? $("#topic").value.trim() : "";
-  const classic = () => ({ text: pickParagraph(app.diff), topic: "" });
-  if (!topic) return classic();
-  if (!(await ensureNet())) return classic(); // ensureNet already explained the problem
+  const fresh = async () => ({ text: await freshText(app.diff), topic: "" });
+  if (!topic) return fresh();
+  if (!(await ensureNet())) return { text: generateText(app.diff), topic: "" }; // ensureNet already explained the problem
   setBusy(true, `Writing a paragraph about "${topic}"...`);
   try {
     const r = await requestGen(topic, app.diff);
     return { text: r.text, topic: r.topic };
   } catch (e) {
     if (e.cancelled) return null;
-    toast(`${e.message} Using a classic paragraph instead.`, true);
-    return classic();
+    toast(`${e.message} Using a fresh general paragraph instead.`, true);
+    return fresh();
   } finally {
     setBusy(false);
   }
 }
+
+// ---- fresh paragraphs: never the same one twice -----------------------------
+/**
+ * The server hands out a paragraph nobody has typed before (AI-written when it has one ready, otherwise newly built).
+ * That answer is instant. If the server is slow or away, the browser builds a new paragraph itself, so starting never waits.
+ */
+async function freshText(diff) {
+  if (net.connected) {
+    try {
+      return await requestFresh(diff);
+    } catch {
+      /* use the local builder below */
+    }
+  }
+  return generateText(diff);
+}
+
+function requestFresh(diff) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => finish(reject, new Error("slow")), 1500);
+    const finish = (fn, v) => {
+      clearTimeout(timer);
+      if (app.pendingFresh === p) app.pendingFresh = null;
+      fn(v);
+    };
+    const p = { resolve: (t) => finish(resolve, t), reject: (e) => finish(reject, e) };
+    app.pendingFresh = p;
+    net.send({ t: "fresh", diff });
+  });
+}
+
+net.on("fresh_ok", (m) => {
+  const p = app.pendingFresh;
+  if (!p) return; // too late: the local builder already took over
+  if (typeof m.text === "string" && /^[\x20-\x7e]{60,700}$/.test(m.text)) p.resolve(m.text);
+  else p.reject(new Error("unusable"));
+});
+net.on("fresh_err", () => app.pendingFresh?.reject(new Error("busy")));
 
 function setBusy(on, title = "") {
   $("#busy").hidden = !on;

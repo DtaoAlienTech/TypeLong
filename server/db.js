@@ -50,6 +50,15 @@ CREATE TABLE IF NOT EXISTS owned (
   item_id TEXT NOT NULL,
   PRIMARY KEY (user_id, item_id)
 );
+-- Stash of AI-written paragraphs. Each one is handed out exactly once (used_at is set), so no race repeats a text.
+CREATE TABLE IF NOT EXISTS paragraph_pool (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  diff TEXT NOT NULL,
+  text TEXT NOT NULL UNIQUE,
+  created_at INTEGER NOT NULL,
+  used_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS paragraph_pool_unused ON paragraph_pool (diff, used_at);
 `;
 
 // columns that may be changed through patchUser (never name/pin from here)
@@ -96,6 +105,14 @@ export function openStore(file = ":memory:") {
     legendIds: p(`SELECT ach_id FROM achievements WHERE user_id = ? AND ach_id LIKE '${LEGEND_PREFIX}%' ORDER BY unlocked_at DESC`),
     eloRank: p("SELECT COUNT(*) + 1 AS r FROM users WHERE ranked_games >= 1 AND elo > ?"),
     wpmRank: p("SELECT COUNT(*) + 1 AS r FROM users WHERE best_wpm > ?"),
+    poolAdd: p("INSERT OR IGNORE INTO paragraph_pool (diff, text, created_at) VALUES (?, ?, ?)"),
+    // pick one unused paragraph at random and mark it used in the same statement (nobody else can get it)
+    poolTake: p(
+      "UPDATE paragraph_pool SET used_at = ? WHERE id = " +
+        "(SELECT id FROM paragraph_pool WHERE diff = ? AND used_at IS NULL ORDER BY RANDOM() LIMIT 1) RETURNING text",
+    ),
+    poolCounts: p("SELECT diff, COUNT(*) AS n FROM paragraph_pool WHERE used_at IS NULL GROUP BY diff"),
+    poolPurge: p("DELETE FROM paragraph_pool WHERE used_at IS NOT NULL AND used_at < ?"),
   };
 
   const num = (v) => Number(v);
@@ -117,6 +134,18 @@ export function openStore(file = ":memory:") {
         throw e;
       }
     },
+
+    // paragraph stash (see server/supply.js)
+    /** true when added, false when the same text is already there. */
+    poolAdd: (diff, text, ts = Date.now()) => Number(q.poolAdd.run(diff, text, ts).changes) > 0,
+    /** One unused paragraph (marked used at once), or null. */
+    poolTake: (diff, ts = Date.now()) => q.poolTake.get(ts, diff)?.text ?? null,
+    poolCounts() {
+      const out = { easy: 0, medium: 0, hard: 0 };
+      for (const r of q.poolCounts.all()) if (r.diff in out) out[r.diff] = Number(r.n);
+      return out;
+    },
+    poolPurge: (olderThan) => Number(q.poolPurge.run(olderThan).changes),
 
     // users
     createUser(name, salt, hash, ts = Date.now()) {

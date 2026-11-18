@@ -106,6 +106,7 @@ Typing Master/
 ├─ server/
 │  ├─ server.js          HTTP static server + WebSocket (rooms, matchmaking, validation)
 │  ├─ ai.js              DeepSeek calls: AI paragraphs, drills, AI coach (server-side only)
+│  ├─ supply.js          gives every race a never-used paragraph (AI stash + word-bank builder)
 │  ├─ db.js              player database (Node's built-in SQLite, file: data/typeclash.db)
 │  ├─ auth.js            name + PIN accounts, sessions, login limiter
 │  └─ economy.js         coins, Elo, quests, achievements, shop, leaderboards (pure rules)
@@ -115,7 +116,8 @@ Typing Master/
    └─ js/
       ├─ main.js         screens, routing, wiring
       ├─ engine.js       pure typing logic + stats (no DOM → unit-testable)
-      ├─ paragraphs.js   paragraph bank by difficulty
+      ├─ paragraphs.js   difficulty names + a small fixed bank (last-resort safety net only)
+      ├─ textgen.js      builds endless unique paragraphs from word banks (server + offline browser)
       ├─ net.js          WebSocket client + clock sync
       ├─ fx.js           particles, confetti, background, shake, combo bursts
       ├─ audio.js        synth sounds
@@ -125,9 +127,9 @@ Typing Master/
 
 ### Network protocol (JSON over WebSocket)
 Client → server: `hello{name}` · `queue{diff}` · `create{diff}` · `join{code}` · `leave` ·
-`progress{pos,keys,errs}` · `finish{keys,errs}` · `rematch`
+`progress{pos,keys,errs}` · `finish{keys,errs}` · `rematch` · `fresh{diff}`
 Server → client: `welcome{id,serverTime}` · `waiting{code?}` · `match{players,text,startAt}` ·
-`opp{id,pos}` · `end{winnerId,reason,results[]}` · `opp_left` · `error{msg}`
+`opp{id,pos}` · `end{winnerId,reason,results[]}` · `opp_left` · `error{msg}` · `fresh_ok{text,diff}`
 
 - **Clock sync:** ping/pong estimates offset so both players see "GO" at the same instant.
 - **Server is the referee:** it decides the winner by *its own* receive time, computes WPM from
@@ -187,7 +189,7 @@ Two features, both optional (the game works exactly as before without a key):
 
 1. **AI topic paragraphs** - in Solo, vs Bot and Private Room you can type any topic (or tap Space / Cricket / Ocean / Coding / History / Food).
    DeepSeek writes a fresh paragraph at the chosen difficulty. In a private room the server writes it once, so both players get the same text.
-   Quick Match stays on the classic bank (two strangers cannot agree on a topic).
+   Quick Match has no topic (two strangers cannot agree on one) but still gets a never-used paragraph, see "Unique paragraphs" below.
 2. **AI Coach** - on the results screen, "Get tips" sends your numbers (WPM, accuracy, consistency, first-half vs second-half pace,
    most-missed letters) and returns 3 short tips plus a "Next:" goal.
 
@@ -202,9 +204,24 @@ Optional `.env` settings: `DEEPSEEK_MODEL` (default `deepseek-flash`), `DEEPSEEK
 ### Safety
 - The key lives only on the server; the browser is only told "AI is on".
 - Per player: 2.5 s between paragraph requests, max 10 AI requests per 10 minutes. Whole server: daily cap.
-- Every AI paragraph is cleaned (ASCII only, one line, length checked); unusable output is retried once, then the classic bank is used.
+- Every AI paragraph is cleaned (ASCII only, one line, length checked); unusable output is retried once, then a fresh general paragraph is used.
 - Coach text is shown with `textContent`, never as HTML.
-- If the AI fails or is slow, the player is told and gets a classic paragraph instead of being stuck.
+- If the AI fails or is slow, the player is told and gets a fresh general paragraph instead of being stuck.
+
+### Unique paragraphs: no race repeats a text
+Every race (Quick Match, Private Room, rematch, vs Bot, Solo) gets a paragraph that nobody has typed before. It never waits for the AI.
+
+1. **The stash.** While the AI is on, the server writes paragraphs in the background: one DeepSeek call = 8 paragraphs on 8 different topics
+   (a list of 100+ subjects), stored in the `paragraph_pool` table. When a race starts it takes one at random and marks it used, so it is never handed out again.
+   The stash keeps 30-60 unused paragraphs per difficulty (`PARA_POOL_LOW`, `PARA_POOL_SIZE`) and refills itself when it drops below the low mark.
+2. **The builder.** If the stash is empty (AI off, out of credit, a very busy hour) the server builds a new paragraph from word banks and sentence shapes (`public/js/textgen.js`).
+   Tested: 20,000 paragraphs per difficulty, 20,000 different ones. The same builder runs in the browser, so Solo and vs Bot work offline too.
+3. **Solo / Bot / Drill without a topic** ask the server for one (`fresh`); the answer is instant, and if the server is slow or away the browser builds its own.
+4. **Cost control.** Refilling has its own daily budget (`PARA_REFILL_DAILY_CALLS`, default 150 calls = about 1,200 paragraphs a day) that is separate from the players' AI allowance
+   (`AI_DAILY_CAP`). If the key is rejected or the credit is gone, the refill pauses for an hour and the builder takes over, so players notice nothing.
+5. **Watch it:** `/healthz` shows `paragraphs.stash` (unused per difficulty) and `paragraphs.served` (how many came from the stash vs the builder).
+
+Settings (all optional): `PARA_POOL=off` (no background refill), `PARA_POOL_LOW=30`, `PARA_POOL_SIZE=60`, `PARA_REFILL_DAILY_CALLS=150`.
 
 
 ## 11. Accounts, coins, ranking, quests, achievements

@@ -276,10 +276,10 @@ try {
   f2.send({ t: "join", code: fw.code });
   const fm = await f1.next("match");
   await f2.next("match");
-  assert.equal(fm.src, "bank");
+  assert.equal(fm.src, "fresh");
   assert.equal(fm.topic, null);
   assert.ok(fm.text.length > 100);
-  ok("private room: AI failure falls back to the classic bank");
+  ok("private room: AI failure falls back to a fresh general paragraph");
 
   // leaving while the paragraph is being written
   mock = () => ({ status: 200, content: GOOD });

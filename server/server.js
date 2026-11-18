@@ -10,7 +10,8 @@ import crypto from "node:crypto";
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
-import { pickParagraph, normalizeDiff } from "../public/js/paragraphs.js";
+import { normalizeDiff } from "../public/js/paragraphs.js";
+import { createSupply } from "./supply.js";
 import { aiEnabled, generateParagraph, coach, cleanTopic, userMessage, logAi, AiError } from "./ai.js";
 import { POWERUPS, CHARGE_EVERY, MAX_HELD } from "../public/js/catalog.js";
 import { openStore } from "./db.js";
@@ -75,6 +76,7 @@ const queues = {}; // "medium" / "medium+c" (chaos) -> waiting clients
 const rooms = new Map(); // code -> room
 let nextId = 1;
 let store = null; // player database, opened in createServer()
+let supply = null; // hands out a never-used paragraph for every race (see server/supply.js)
 
 const userOf = (client) => (client.userId ? store.userById(client.userId) : null);
 const eloOf = (client) => userOf(client)?.elo ?? 1000;
@@ -183,6 +185,7 @@ function healthInfo() {
     uptimeSec: Math.round(process.uptime()),
     rssMB: Math.round(process.memoryUsage().rss / 1048576),
     loopLagMs: { p50: lag(loopDelay.percentile(50)), p99: lag(loopDelay.percentile(99)), max: lag(loopDelay.max) },
+    paragraphs: supply?.info() ?? null, // unused AI paragraphs waiting, and how many were served from where
   };
   loopDelay.reset();
   return info;
@@ -296,7 +299,7 @@ async function startRace(room) {
   }
 
   room.state = "countdown";
-  room.text = aiText ?? pickParagraph(room.diff, room.lastText);
+  room.text = aiText ?? supply.take(room.diff).text; // a paragraph nobody has typed before
   room.lastText = room.text;
   room.startAt = Date.now() + CONFIG.countdownMs;
   room.settled = false;
@@ -321,7 +324,7 @@ async function startRace(room) {
       code: room.code,
       diff: room.diff,
       text: room.text,
-      src: aiText ? "ai" : "bank",
+      src: aiText ? "ai" : "fresh", // "ai" = written for the chosen topic; "fresh" = a new paragraph from the supply
       topic: aiText ? room.topic : null,
       ranked: room.ranked,
       chaos: room.chaos,
@@ -653,6 +656,15 @@ const handlers = {
     pushProfile(client);
   },
 
+  /** Solo / Bot / Drill without a topic: a paragraph nobody has typed before. Cheap (no AI call), so only lightly limited. */
+  fresh(client, m) {
+    const now = Date.now();
+    if (now - (client.lastFresh ?? 0) < 600) return send(client, { t: "fresh_err" });
+    client.lastFresh = now;
+    const diff = normalizeDiff(m.diff);
+    send(client, { t: "fresh_ok", text: supply.take(diff).text, diff });
+  },
+
   // ---- AI (DeepSeek) ----
   async gen(client, m) {
     if (!aiEnabled()) return send(client, { t: "gen_err", msg: userMessage(new AiError("disabled")) });
@@ -790,6 +802,9 @@ export function createServer(opts = {}) {
   if (dbPath !== ":memory:") fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   store = openStore(dbPath);
   dbFile = dbPath;
+  supply = createSupply({ store });
+  // background refill of the AI paragraph stash: only when asked for (the real start-up does; tests never spend AI credits)
+  if (opts.paragraphRefill && process.env.PARA_POOL !== "off" && aiEnabled()) supply.start();
 
   const server = http.createServer((req, res) => {
     if (req.url === "/healthz") {
@@ -906,6 +921,7 @@ export function createServer(opts = {}) {
   }
 
   server.on("close", () => {
+    supply?.stop();
     clearInterval(hb);
     clearInterval(backupTimer);
     clearTimeout(onlineTimer);
@@ -927,6 +943,9 @@ export const testHooks = {
   },
   backupNow,
   resetAiLimits: () => aiByIp.clear(),
+  get supply() {
+    return supply;
+  },
 };
 
 /**
@@ -949,7 +968,7 @@ export function drain(server, graceMs = 3000) {
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const PORT = Number(process.env.PORT) || 3000;
-  const server = createServer();
+  const server = createServer({ paragraphRefill: true });
 
   process.on("unhandledRejection", (e) => console.error("unhandledRejection:", e));
   process.on("uncaughtException", (e) => {

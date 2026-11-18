@@ -12,6 +12,7 @@ A real-time **1v1 typing race** for the browser. You and an opponent type the sa
 - **Leaderboards:** Ranked, Fastest, Legends
 - **Chaos mode:** earn Freeze, Blur and Shield power-ups with clean typing, press Tab to use them
 - **My Stats:** race history, keyboard heatmap of the letters you miss, daily goal, weak-key drills
+- **A new paragraph every race:** never the same text twice. The AI writes fresh paragraphs in the background (instant to use); without AI they are built from word banks
 - **AI (DeepSeek, optional):** topic paragraphs, AI Coach tips, AI-written drills. The API key stays on the server
 - **Built to run:** Docker, SQLite with automatic backups, graceful restarts, online player cap, load-test tool
 
@@ -43,6 +44,7 @@ npm start                     # http://localhost:3001 (port from .env, default 3
 | `DEEPSEEK_THINKING=disabled` | recommended: about 3x faster AI replies |
 | `MAX_ONLINE=400` | most players using Quick Match / Private Room at once; extra visitors can still play vs Bot / Solo |
 | `AI_DAILY_CAP`, `AI_PER_IP`, `AI_REQUIRE_LOGIN` | limits that protect your AI credits |
+| `PARA_REFILL_DAILY_CALLS=150` | AI calls per day for the background paragraph stash (each call = 8 paragraphs); `PARA_POOL=off` disables it |
 | `DOMAIN`, `TRUST_PROXY=1`, `BIND_ADDR=127.0.0.1` | for a public HTTPS domain (see `PLAN.md`, section 15) |
 
 Never commit `.env`. It is in `.gitignore`.
@@ -55,7 +57,7 @@ Test your AI key: `docker compose exec typeclash node scripts/ai-check.js` (or `
 ## Tests
 
 ```bash
-npm test                      # 100 automated tests (no real API calls, no real database)
+npm test                      # 117 automated tests (no real API calls, no real database)
 npm run loadtest -- --help    # load-test tool (use a throwaway server, see PLAN.md)
 ```
 
