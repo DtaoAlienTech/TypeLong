@@ -111,6 +111,27 @@ await test("markup + code: every way into a game checks the name; every checked 
   assert.ok(main.includes("if (!ensureName()) return; // empty or unusable name"), "the Play button checks the name");
 });
 
+await test("home decorations never reuse the race screen's class names (this once broke every race: resetHud loops over every .lane)", () => {
+  const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
+  const noComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const homeCss = noComments(fs.readFileSync(new URL("../public/css/home.css", import.meta.url), "utf8"));
+  const mainCss = noComments(fs.readFileSync(new URL("../public/css/style.css", import.meta.url), "utf8"));
+  // every class the race screen's code looks up: elements with these classes must only exist inside the race screen
+  const raceHtml = html.slice(html.indexOf('id="screen-race"'), html.indexOf('id="screen-results"'));
+  const countClass = (s, cls) => [...s.matchAll(/class="([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/)).filter((t) => t === cls).length; // exact class names only
+  for (const cls of ["lane", "racer", "lane-fill"]) {
+    const all = countClass(html, cls);
+    const inRace = countClass(raceHtml, cls);
+    assert.ok(inRace > 0, `.${cls} exists in the race screen`);
+    assert.equal(all, inRace, `.${cls} is used outside the race screen`);
+    assert.ok(!new RegExp(`\\.${cls}(?![\\w-])`).test(homeCss), `home.css must not restyle .${cls}`);
+  }
+  // none of the new home classes may also be styled by the main stylesheet
+  for (const cls of ["hero-track", "hero-lane", "hero-runner", "keycap", "keys", "field-err", "room-wrap"]) {
+    assert.ok(!new RegExp(`\\.${cls}(?![\\w-])`).test(mainCss), `.${cls} already exists in style.css`);
+  }
+});
+
 // ---- the server never lets a nameless or odd-named guest through either ----
 const server = createServer({ dbPath: ":memory:" });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
