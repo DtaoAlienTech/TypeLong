@@ -1,0 +1,203 @@
+/* =====================================================================
+   Home screen motion + friendly input errors
+   (only transform / opacity / glow are animated; "reduce motion" switches the decorations off)
+   ===================================================================== */
+
+/* ---- input errors: red field, message, shake ---- */
+.field-err {
+  display: block;
+  margin: 0;
+  color: var(--error);
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+  animation: errIn 0.22s var(--ease) both;
+}
+input[aria-invalid="true"] {
+  border-color: var(--error) !important;
+  box-shadow: 0 0 0 3px rgba(255, 77, 94, 0.2) !important;
+}
+.shake {
+  animation: shakeX 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes shakeX {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+@keyframes errIn {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+.room-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.modal {
+  animation: modalFade 0.2s ease both;
+}
+@keyframes modalFade {
+  from { opacity: 0; }
+}
+
+/* ---- the hero builds itself, one piece after another (restarts every time you come back home) ---- */
+#screen-home.active .hero > :not(.logo) {
+  animation: heroIn 0.7s var(--ease) backwards;
+  animation-delay: calc(var(--k, 0) * 90ms + 350ms);
+}
+.hero > :nth-child(2) { --k: 0; }
+.hero > :nth-child(3) { --k: 1; }
+.hero > :nth-child(4) { --k: 2; }
+.hero > :nth-child(5) { --k: 3; }
+.hero > :nth-child(6) { --k: 4; }
+.hero > :nth-child(7) { --k: 5; }
+.hero > :nth-child(8) { --k: 6; }
+@keyframes heroIn {
+  from { opacity: 0; transform: translateY(22px) scale(0.98); }
+}
+
+/* ---- logo: letters drop in, then ride a slow wave; CLASH glows ---- */
+.logo.split {
+  perspective: 700px;
+  white-space: nowrap; /* TYPE and CLASH stay on one line, like before the letters were split */
+}
+.logo.split span {
+  background: none;
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  color: inherit;
+  filter: none;
+}
+.logo.split i {
+  display: inline-block;
+  font-style: normal;
+  animation: letterIn 0.8s var(--ease) calc(var(--i) * 75ms + 100ms) backwards,
+    letterBob 4.2s ease-in-out calc(1.7s + var(--i) * 0.17s) infinite;
+}
+.logo.split .w-clash {
+  display: inline-block;
+  filter: drop-shadow(0 0 22px rgba(124, 92, 255, 0.55));
+  animation: logoGlow 5s ease-in-out 1.8s infinite;
+}
+/* each letter shows its own fifth of the gradient, so the five together read as one cyan -> violet -> pink sweep */
+.logo.split .w-clash i {
+  background: linear-gradient(90deg, var(--you), var(--primary) 55%, var(--rival));
+  background-size: 500% 100%;
+  background-position: calc(var(--j) * 25%) 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@keyframes letterIn {
+  0% { opacity: 0; transform: translateY(-80px) rotateX(70deg) scale(1.4); filter: blur(8px); }
+  60% { opacity: 1; transform: translateY(10px) rotateX(-8deg) scale(0.97); filter: blur(0); }
+  100% { transform: none; }
+}
+@keyframes letterBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes logoGlow {
+  50% { filter: drop-shadow(0 0 36px rgba(34, 228, 255, 0.65)); }
+}
+
+/* ---- two racers keep overtaking each other under the logo ---- */
+.track {
+  width: min(360px, 78%);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: -4px 0 2px;
+}
+.lane {
+  position: relative;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(140, 150, 255, 0.1);
+  overflow: hidden;
+}
+.runner {
+  position: absolute;
+  top: 0;
+  left: -25%;
+  width: 22%;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, var(--c));
+  box-shadow: 0 0 12px var(--c);
+  animation: run var(--t) cubic-bezier(0.5, 0, 0.3, 1) var(--w) infinite;
+}
+.runner.you { --c: var(--you); --t: 3.1s; --w: 1.2s; }
+.runner.rival { --c: var(--rival); --t: 3.7s; --w: 1s; }
+@keyframes run {
+  0% { left: -25%; }
+  70%, 100% { left: 105%; }
+}
+
+/* ---- PLAY: breathing glow and a passing shine ---- */
+#screen-home.active .hero > #btn-play {
+  position: relative;
+  overflow: hidden;
+  animation: heroIn 0.7s var(--ease) 800ms backwards, playGlow 2.8s ease-in-out 1.8s infinite;
+}
+#btn-play::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.4) 50%, transparent 62%);
+  transform: translateX(-130%);
+  animation: shine 3.6s ease-in-out 2.4s infinite;
+  pointer-events: none;
+}
+@keyframes playGlow {
+  0%, 100% { box-shadow: 0 0 24px rgba(124, 92, 255, 0.4); }
+  50% { box-shadow: 0 0 46px rgba(34, 228, 255, 0.6), 0 0 0 6px rgba(34, 228, 255, 0.08); }
+}
+@keyframes shine {
+  0% { transform: translateX(-130%); }
+  35%, 100% { transform: translateX(130%); }
+}
+
+/* ---- keycaps floating up behind the page (home only) ---- */
+.keys {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+body:not([data-screen="home"]) .keys {
+  display: none;
+}
+.keycap {
+  position: absolute;
+  left: var(--x);
+  bottom: -70px;
+  width: calc(46px * var(--s));
+  height: calc(46px * var(--s));
+  display: grid;
+  place-items: center;
+  font: 700 calc(18px * var(--s)) var(--mono);
+  font-style: normal;
+  color: rgba(232, 235, 255, 0.55);
+  border-radius: 10px;
+  background: linear-gradient(160deg, #232a55, #151933);
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  box-shadow: 0 4px 0 #0e1130, 0 8px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  animation: keyFloat var(--d) linear var(--delay) infinite;
+}
+.keycap.c1 { color: var(--you); border-color: rgba(34, 228, 255, 0.45); }
+.keycap.c2 { color: var(--rival); border-color: rgba(255, 61, 139, 0.45); }
+@keyframes keyFloat {
+  0% { transform: translateY(0) rotate(var(--r0)); opacity: 0; }
+  10% { opacity: 0.5; }
+  85% { opacity: 0.5; }
+  100% { transform: translateY(-118vh) rotate(var(--r1)); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keys, .track { display: none; }
+  #btn-play::after { display: none; }
+}

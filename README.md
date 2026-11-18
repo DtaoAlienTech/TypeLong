@@ -57,7 +57,7 @@ Test your AI key: `docker compose exec typeclash node scripts/ai-check.js` (or `
 ## Tests
 
 ```bash
-npm test                      # 117 automated tests (no real API calls, no real database)
+npm test                      # 125 automated tests (no real API calls, no real database)
 npm run loadtest -- --help    # load-test tool (use a throwaway server, see PLAN.md)
 ```
 

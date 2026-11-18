@@ -3,6 +3,7 @@
 
 import { ICONS, ACHIEVEMENTS, DAILY_QUESTS, WEEKLY_QUESTS, SHOP, LEGEND_PREFIX } from "./catalog.js";
 import { renderDashboard, recordRace } from "./history.js";
+import { checkAccountName, checkPin } from "./validate.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const TOKEN_KEY = "typeclash.token";
@@ -117,9 +118,39 @@ export function initMeta(ctx) {
   function openAuth(mode = "login") {
     setAuthMode(mode);
     $("#auth-pin").value = "";
+    clearAuthErrors();
     $("#modal-auth").hidden = false;
     $("#auth-name").focus();
   }
+
+  // ---- checks before anything is sent (the server checks again) ----
+  function authFail(msg, input = $("#auth-pin")) {
+    const box = $("#auth-err");
+    box.textContent = msg;
+    box.hidden = false;
+    input.setAttribute("aria-invalid", "true");
+    input.classList.remove("shake");
+    void input.offsetWidth;
+    input.classList.add("shake");
+    sfx.error();
+    input.focus();
+  }
+  function clearAuthErrors() {
+    $("#auth-err").hidden = true;
+    for (const i of [$("#auth-name"), $("#auth-pin")]) {
+      i.removeAttribute("aria-invalid");
+      i.classList.remove("shake");
+    }
+  }
+  $("#auth-name").addEventListener("input", (e) => {
+    e.target.value = e.target.value.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 14); // only what an account name may contain
+    clearAuthErrors();
+  });
+  $("#auth-pin").addEventListener("input", (e) => {
+    e.target.value = e.target.value.replace(/\D/g, "").slice(0, 8); // digits only
+    clearAuthErrors();
+  });
+  let authTimer = null;
   const closeAuth = () => ($("#modal-auth").hidden = true);
   $("#auth-tabs").addEventListener("click", (e) => {
     const t = e.target.closest(".tab");
@@ -132,11 +163,24 @@ export function initMeta(ctx) {
   $("#auth-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     unlockAudio();
+    const n = checkAccountName($("#auth-name").value);
+    if (!n.ok) return authFail(n.msg, $("#auth-name"));
+    const p = checkPin($("#auth-pin").value);
+    if (!p.ok) return authFail(p.msg, $("#auth-pin"));
+    clearAuthErrors();
     if (!(await ensureNet())) return;
     $("#auth-submit").disabled = true;
-    net.send({ t: authMode, name: $("#auth-name").value.trim(), pin: $("#auth-pin").value });
+    net.send({ t: authMode, name: n.value, pin: p.value });
+    clearTimeout(authTimer); // never leave the button stuck if the server does not answer
+    authTimer = setTimeout(() => {
+      if ($("#auth-submit").disabled) {
+        $("#auth-submit").disabled = false;
+        authFail("No answer from the server. Try again.");
+      }
+    }, 12000);
   });
   net.on("auth_ok", (m) => {
+    clearTimeout(authTimer);
     $("#auth-submit").disabled = false;
     tokenStore.set(m.token);
     app.profile = { me: m.me, achievements: m.achievements, owned: m.owned, quests: m.quests };
@@ -148,10 +192,9 @@ export function initMeta(ctx) {
     if (app.screen === "results") $("#nudge").hidden = true;
   });
   net.on("auth_err", (m) => {
+    clearTimeout(authTimer);
     $("#auth-submit").disabled = false;
-    const box = $("#auth-err");
-    box.textContent = m.msg;
-    box.hidden = false;
+    authFail(String(m.msg ?? "Could not sign in."));
   });
   net.on("welcome", () => {
     const t = tokenStore.get();

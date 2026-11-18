@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "node --watch server/server.js",
-    "test": "node test/engine.test.js && node test/client.test.js && node test/economy.test.js && node test/server.test.js && node test/ai.test.js && node test/accounts.test.js && node test/ops.test.js && node test/supply.test.js",
+    "test": "node test/engine.test.js && node test/client.test.js && node test/economy.test.js && node test/server.test.js && node test/ai.test.js && node test/accounts.test.js && node test/ops.test.js && node test/supply.test.js && node test/validate.test.js",
     "ai:check": "node scripts/ai-check.js",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",

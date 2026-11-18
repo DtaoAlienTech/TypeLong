@@ -4,6 +4,7 @@
 // Everything the model returns is validated before the game uses it.
 
 import { normalizeDiff } from "../public/js/paragraphs.js";
+import { cleanTopicText } from "../public/js/validate.js";
 
 const DEFAULT_BASE = "https://api.deepseek.com";
 
@@ -141,17 +142,8 @@ export const SPECS = {
   },
 };
 
-/** Topic = plain words only. Returns "" if unusable. */
-export function cleanTopic(raw) {
-  if (typeof raw !== "string") return "";
-  const t = raw
-    .replace(/[^A-Za-z0-9 ,.'&+#-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 40)
-    .trim();
-  return t.length >= 2 ? t : "";
-}
+/** Topic = plain words only (shared rule, see public/js/validate.js). Returns "" if unusable. */
+export const cleanTopic = cleanTopicText;
 
 /** Letters to emphasise in a drill: up to 6 distinct a-z letters. */
 export function cleanFocus(raw) {

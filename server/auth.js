@@ -4,11 +4,13 @@
 import crypto from "node:crypto";
 import os from "node:os";
 import { promisify } from "node:util";
+import { ACCOUNT_NAME_RE, PIN_RE } from "../public/js/validate.js";
 
 const scrypt = promisify(crypto.scrypt);
 
-export const NAME_RE = /^[A-Za-z0-9_.-]{3,14}$/;
-export const PIN_RE = /^\d{4,8}$/;
+// the rules live in one shared file, so the browser and the server can never disagree
+export const NAME_RE = ACCOUNT_NAME_RE;
+export { PIN_RE };
 
 export class AuthError extends Error {
   constructor(msg) {

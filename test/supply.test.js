@@ -263,16 +263,17 @@ try {
   const w = await x.next("waiting");
   y.send({ t: "join", code: w.code });
   const m1 = await x.next("match");
-  await y.next("match");
+  assert.equal((await y.next("match")).text, m1.text, "private room: both players get the same paragraph");
   await sleep(CONFIG.countdownMs + CONFIG.limitMs + 400); // race times out
   await x.next("end", 5000);
   x.send({ t: "rematch" });
   y.send({ t: "rematch" });
   const m2 = await x.next("match", 5000);
   assert.notEqual(m1.text, m2.text);
+  assert.equal((await y.next("match", 5000)).text, m2.text, "rematch: again the same paragraph for both");
   x.close();
   y.close();
-  ok("private room rematch: a different paragraph");
+  ok("private room: both players share one paragraph; the rematch brings a new one (again shared)");
 
   // Solo / Bot / Drill ask the server for one: instant, different each time, lightly rate-limited
   const s = await connect();

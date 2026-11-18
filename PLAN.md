@@ -118,6 +118,8 @@ Typing Master/
       ├─ engine.js       pure typing logic + stats (no DOM → unit-testable)
       ├─ paragraphs.js   difficulty names + a small fixed bank (last-resort safety net only)
       ├─ textgen.js      builds endless unique paragraphs from word banks (server + offline browser)
+      ├─ validate.js     input rules (name, PIN, room code, topic) shared by the browser and the server
+      ├─ homefx.js       home screen motion: letter-drop logo, floating keycaps (CSS in css/home.css)
       ├─ net.js          WebSocket client + clock sync
       ├─ fx.js           particles, confetti, background, shake, combo bursts
       ├─ audio.js        synth sounds
@@ -372,3 +374,24 @@ Nobody can see or take the key: it exists only on the server. Players can only u
 a topic is cut to 40 plain characters and put inside a fixed instruction, and every answer is cleaned (plain ASCII, one paragraph, length-checked).
 Cost is capped three ways: 10 AI requests per player per 10 minutes, `AI_PER_IP` (60) per network address per 10 minutes, and `AI_DAILY_CAP` (400) for the whole server per day.
 DeepSeek is prepaid, so the most anyone can ever spend is the balance you topped up. Set `AI_REQUIRE_LOGIN=1` to make AI available to signed-in players only.
+
+## 16. Input rules and the home screen
+
+### What players type is checked (browser first, server again)
+All rules live in one file, `public/js/validate.js`, used by the browser (instant, friendly message under the field, red outline, small shake) and by the server (`server/auth.js`, `server/ai.js`, `server/server.js`), so the two can never disagree. A test compares them on thousands of random inputs.
+
+| Field | Rule | When it is wrong |
+|---|---|---|
+| Your name (home) | 2-14 characters: letters (any alphabet), numbers, space, `_ . -`, at least one letter or number. Other characters are removed while you type | Play stays on the home screen: "Enter your name to play." |
+| Account name | 3-14 of `A-Z a-z 0-9 _ . -` | message under the field, nothing is sent |
+| PIN | 4-8 digits (letters cannot be typed) | message under the field, nothing is sent |
+| Room code | exactly 4 letters (upper-cased for you) | "A room code has 4 letters." |
+| AI topic | optional; if typed: 2-40 plain characters | "Topic: use letters or numbers, 2 to 40 characters." |
+
+- Every way into a game (Play, Quick Match, Create / Join room, vs Bot, Solo, drills) re-checks the name, so an empty name cannot slip in by another route.
+- The server never trusts the browser: a `hello` with no name, a 1-letter name, symbols only, or something that is not text becomes `Player1234`.
+- The sign-in button can never get stuck: if the server does not answer within 12 seconds it is enabled again with a message.
+
+### Home screen motion (`public/js/homefx.js`, `public/css/home.css`)
+Logo letters drop in one by one and then ride a slow wave while CLASH glows; two racers keep overtaking each other under the logo; keycaps drift up behind the page; the page builds itself top to bottom each time you come back; PLAY breathes and shines; the stats count up; error fields shake.
+Only transform / opacity / glow are animated. "Reduce motion" in the system settings turns the decorations off.

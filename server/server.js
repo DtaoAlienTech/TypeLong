@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
 import { normalizeDiff } from "../public/js/paragraphs.js";
 import { createSupply } from "./supply.js";
+import { checkPlayerName } from "../public/js/validate.js";
 import { aiEnabled, generateParagraph, coach, cleanTopic, userMessage, logAi, AiError } from "./ai.js";
 import { POWERUPS, CHARGE_EVERY, MAX_HELD } from "../public/js/catalog.js";
 import { openStore } from "./db.js";
@@ -112,12 +113,10 @@ function send(client, obj) {
   ws.send(JSON.stringify(obj));
 }
 
-function sanitizeName(name, id) {
-  const clean = String(name ?? "")
-    .replace(/[^\p{L}\p{N} _.\-]/gu, "")
-    .trim()
-    .slice(0, 14);
-  return clean || `Player${String(1000 + (id % 9000))}`;
+/** Guest name: the same rule the browser applies (public/js/validate.js). Anything unusable becomes "Player1234". */
+export function sanitizeName(name, id) {
+  const r = typeof name === "string" ? checkPlayerName(name) : { ok: false }; // a name that is not even text is refused
+  return r.ok ? r.value : `Player${String(1000 + (id % 9000))}`;
 }
 
 const isInt = (n) => Number.isInteger(n);

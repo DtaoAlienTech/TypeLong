@@ -2,6 +2,8 @@
 import { TypingEngine, formatTime } from "./engine.js";
 import { normalizeDiff } from "./paragraphs.js";
 import { generateText } from "./textgen.js";
+import { cleanNameInput, checkPlayerName, checkRoomCode, cleanRoomCodeInput, checkTopic } from "./validate.js";
+import { initHomeFx } from "./homefx.js";
 import { Net } from "./net.js";
 import { Bot, BOT_LEVELS } from "./bot.js";
 import { FX, Background, REDUCED, pop, shake, flash, countUp } from "./fx.js";
@@ -71,6 +73,7 @@ function show(name) {
   document.body.dataset.screen = name;
   for (const s of $$(".screen")) s.classList.toggle("active", s.id === `screen-${name}`);
   window.scrollTo(0, 0);
+  if (name === "home") refreshHomeStats(true);
 }
 
 function toast(msg, err = false) {
@@ -100,13 +103,45 @@ function bindChips(sel, initial, onChange) {
 }
 
 function playerName() {
-  return $("#name").value.trim().slice(0, 14);
+  return cleanNameInput($("#name").value).trim();
 }
 
-function refreshHomeStats() {
-  $("#st-best").textContent = Math.round(store.data.best);
-  $("#st-games").textContent = store.data.games;
-  $("#st-wins").textContent = store.data.wins;
+// ---- friendly input errors: red field, a message under it, a little shake and a soft "nope" sound ----
+function fieldError(input, note, msg) {
+  input.setAttribute("aria-invalid", "true");
+  input.classList.remove("shake");
+  void input.offsetWidth; // restart the shake if it is already showing
+  input.classList.add("shake");
+  if (note) {
+    note.textContent = msg;
+    note.hidden = false;
+  }
+  sfx.error();
+  input.focus();
+}
+function clearFieldError(input, note) {
+  input.removeAttribute("aria-invalid");
+  input.classList.remove("shake");
+  if (note) note.hidden = true;
+}
+
+/** Every way into a game goes through here: no name, no race. (The Play button checks it too, so the message shows at once.) */
+function ensureName() {
+  const r = checkPlayerName($("#name").value);
+  if (r.ok) {
+    if ($("#name").value !== r.value) $("#name").value = r.value;
+    return true;
+  }
+  if (app.screen !== "home") show("home");
+  fieldError($("#name"), $("#name-err"), r.msg);
+  return false;
+}
+
+function refreshHomeStats(animate = false) {
+  for (const [sel, v] of [["#st-best", Math.round(store.data.best)], ["#st-games", store.data.games], ["#st-wins", store.data.wins]]) {
+    if (animate && v > 0) countUp($(sel), v, { ms: 900 });
+    else $(sel).textContent = v;
+  }
 }
 
 function updateSoundBtn() {
@@ -116,6 +151,10 @@ function updateSoundBtn() {
 // ---------------------------------------------------------------- home
 $("#name").value = store.data.name;
 $("#name").addEventListener("input", () => {
+  // letters, numbers, space and _ . - only: what you see is what the server will use
+  const clean = cleanNameInput($("#name").value);
+  if (clean !== $("#name").value) $("#name").value = clean;
+  clearFieldError($("#name"), $("#name-err"));
   store.data.name = playerName();
   store.save();
 });
@@ -124,6 +163,7 @@ $("#name").addEventListener("keydown", (e) => {
 });
 $("#btn-play").addEventListener("click", () => {
   unlockAudio();
+  if (!ensureName()) return; // empty or unusable name: stay here and say why
   sfx.click();
   show("modes");
   updateModeUI();
@@ -141,8 +181,11 @@ $("#btn-brand").addEventListener("click", () => {
   if (app.screen === "lobby") cancelLobby();
   show("home");
 });
-refreshHomeStats();
+refreshHomeStats(true);
 updateSoundBtn();
+initHomeFx(); // animated logo + floating keys (skipped for "reduce motion")
+// first visit on a computer: put the cursor in the name box
+if (!playerName() && matchMedia("(hover: hover)").matches) setTimeout(() => $("#name").focus({ preventScroll: true }), 1200);
 
 // typewriter flourish under the logo
 (() => {
@@ -172,7 +215,7 @@ function updateModeUI() {
   $("#full-max").textContent = app.max;
   $("#row-bot").hidden = app.mode !== "bot";
   $("#row-private").hidden = app.mode !== "private";
-  const wantsTopic = app.mode !== "quick"; // quick match uses the same classic paragraph for both strangers
+  const wantsTopic = app.mode !== "quick"; // quick match: two strangers cannot agree on a topic (they still share one fresh paragraph)
   $("#row-topic").hidden = !(app.ai && wantsTopic);
   const local = ["localhost", "127.0.0.1"].includes(location.hostname);
   $("#ai-off-note").hidden = !(!app.ai && wantsTopic && local);
@@ -218,7 +261,8 @@ $("#btn-start").addEventListener("click", () => {
 $("#btn-create").addEventListener("click", startCreate);
 $("#btn-join").addEventListener("click", startJoin);
 $("#join-code").addEventListener("input", (e) => {
-  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
+  e.target.value = cleanRoomCodeInput(e.target.value);
+  clearFieldError(e.target, $("#join-err"));
 });
 $("#join-code").addEventListener("keydown", (e) => {
   if (e.key === "Enter") startJoin();
@@ -310,6 +354,7 @@ setInterval(() => {
 }, 7000);
 
 async function startQuick() {
+  if (!ensureName()) return;
   if (app.full) return showFull();
   if (!(await ensureNet())) return;
   sendHello();
@@ -320,10 +365,13 @@ async function startQuick() {
 async function startCreate() {
   unlockAudio();
   sfx.click();
+  if (!ensureName()) return;
+  const t = checkTopic(app.ai ? $("#topic").value : "");
+  if (!t.ok) return fieldError($("#topic"), $("#topic-err"), t.msg);
   if (app.full) return showFull();
   if (!(await ensureNet())) return;
   sendHello();
-  const topic = app.ai ? $("#topic").value.trim() : "";
+  const topic = t.value;
   app.askedTopic = !!topic;
   net.send({ t: "create", diff: app.diff, topic, chaos: app.chaos });
   setLobby({ title: "Creating room...", code: null, topic });
@@ -332,9 +380,11 @@ async function startCreate() {
 async function startJoin() {
   unlockAudio();
   sfx.click();
+  if (!ensureName()) return;
+  const c = checkRoomCode($("#join-code").value);
+  if (!c.ok) return fieldError($("#join-code"), $("#join-err"), c.msg);
+  const code = c.value;
   if (app.full) return showFull();
-  const code = $("#join-code").value.trim().toUpperCase();
-  if (code.length !== 4) return toast("Enter the 4-letter room code.", true);
   if (!(await ensureNet())) return;
   sendHello();
   net.send({ t: "join", code });
@@ -452,6 +502,7 @@ const ghostEl = $("#ghost");
 const kb = $("#kb");
 
 async function startSolo() {
+  if (!ensureName()) return;
   app.lastConfig = { mode: "solo" };
   const g = await pickText();
   if (!g) return; // cancelled while the AI was writing
@@ -467,6 +518,7 @@ async function startSolo() {
 }
 
 async function startBot() {
+  if (!ensureName()) return;
   app.lastConfig = { mode: "bot" };
   const g = await pickText();
   if (!g) return;
@@ -487,7 +539,12 @@ async function startBot() {
 // ---- AI paragraphs (solo / bot): ask the server, which asks DeepSeek ----------
 /** A paragraph about the typed topic (AI), or a fresh never-used one. Returns null if the player cancelled. */
 async function pickText() {
-  const topic = app.ai ? $("#topic").value.trim() : "";
+  const t = checkTopic(app.ai ? $("#topic").value : "");
+  if (!t.ok) {
+    fieldError($("#topic"), $("#topic-err"), t.msg);
+    return null; // same as "cancelled": the race does not start
+  }
+  const topic = t.value;
   const fresh = async () => ({ text: await freshText(app.diff), topic: "" });
   if (!topic) return fresh();
   if (!(await ensureNet())) return { text: generateText(app.diff), topic: "" }; // ensureNet already explained the problem
@@ -549,6 +606,7 @@ function setBusy(on, title = "") {
 
 /** Practice the letters you miss: AI-written when available, otherwise built from a word bank. */
 async function startDrill(letters) {
+  if (!ensureName()) return;
   const ls = [...new Set((letters ?? []).map((l) => String(l).toLowerCase()).filter((l) => /^[a-z]$/.test(l)))].slice(0, 6);
   if (!ls.length) return toast("No weak letters yet. Race a bit first!", true);
   app.lastDrillLetters = ls;
@@ -617,9 +675,11 @@ $("#chips-topic").addEventListener("click", (e) => {
   unlockAudio();
   sfx.click();
   $("#topic").value = chip.dataset.v;
+  clearFieldError($("#topic"), $("#topic-err"));
   for (const c of $$("#chips-topic .chip")) c.classList.toggle("active", c === chip);
 });
 $("#topic").addEventListener("input", () => {
+  clearFieldError($("#topic"), $("#topic-err"));
   for (const c of $$("#chips-topic .chip")) c.classList.remove("active");
 });
 $("#topic").addEventListener("keydown", (e) => {
