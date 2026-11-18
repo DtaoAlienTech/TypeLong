@@ -47,6 +47,9 @@ npm start                     # http://localhost:3001 (port from .env, default 3
 
 Never commit `.env`. It is in `.gitignore`.
 
+**Server that already has other apps and a reverse proxy?** Do not start the built-in HTTPS profile. Run TypeClash alone
+(`docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build`) and point your proxy at it. Steps for Nginx Proxy Manager, nginx, Traefik and Caddy are in `PLAN.md`, section 15.
+
 Test your AI key: `docker compose exec typeclash node scripts/ai-check.js` (or `npm run ai:check`).
 
 ## Tests

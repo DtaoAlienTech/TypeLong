@@ -320,6 +320,36 @@ The game switches to secure `wss://` by itself on an https address. You need thr
 6. Check: open https://type.dtaoofficial.com, then run a Quick Match in two browsers.
 7. **Back up** `data/backups` off the machine regularly.
 
+### A server that already runs other apps (shared ports 80 and 443)
+If your server already has other Docker apps and a reverse proxy (Nginx Proxy Manager, Traefik, nginx, Caddy) that owns ports 80 and 443,
+do NOT use `--profile https`. Run only TypeClash and let your existing proxy send `type.dtaoofficial.com` to it.
+
+1. In `.env` use: `HOST_PORT=3001` (the default; it is free in your `docker ps` list, but also check `sudo ss -ltnp | grep 3001`), `BIND_ADDR=127.0.0.1`, `TRUST_PROXY_HEADER=x-real-ip`, plus your key and `MAX_ONLINE`. No `DOMAIN` line is needed.
+2. Start it:
+   - proxy runs **in Docker**: `docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build` (set `PROXY_NETWORK=` to your proxy's network from `docker network ls`)
+   - proxy installed **directly on the server** (not in Docker): `docker compose up -d --build`
+3. Add a site for `type.dtaoofficial.com` in your proxy, pointing at `http://typeclash:3001` (proxy in Docker) or `http://127.0.0.1:3001` (proxy on the host). **WebSockets must be on.**
+   - Nginx Proxy Manager: Proxy Host, scheme `http`, forward host `typeclash`, port `3001`, tick **Websockets Support**, SSL tab: request a Let's Encrypt certificate and tick Force SSL.
+   - nginx:
+     ```nginx
+     location / {
+         proxy_pass http://127.0.0.1:3001;
+         proxy_http_version 1.1;
+         proxy_set_header Upgrade $http_upgrade;
+         proxy_set_header Connection "upgrade";
+         proxy_set_header Host $host;
+         proxy_set_header X-Real-IP $remote_addr;
+         proxy_read_timeout 3600s;
+     }
+     ```
+   - Traefik: labels on the service `traefik.enable=true`, ``traefik.http.routers.typeclash.rule=Host(`type.dtaoofficial.com`)``, `traefik.http.routers.typeclash.entrypoints=websecure`, `traefik.http.routers.typeclash.tls.certresolver=<your resolver>`, `traefik.http.services.typeclash.loadbalancer.server.port=3001`.
+   - Caddy: `type.dtaoofficial.com { reverse_proxy typeclash:3001 }` (and `TRUST_PROXY=1` instead of `TRUST_PROXY_HEADER`).
+4. DNS A record `type` -> the server IP (or reuse your wildcard record).
+5. `TRUST_PROXY_HEADER` matters: without it every player looks like the proxy's address and the per-address limits would hit everyone together. Pick a header your proxy overwrites
+   (`x-real-ip` for nginx / Nginx Proxy Manager / Traefik, `cf-connecting-ip` behind Cloudflare). Do not trust a header the visitor can send themselves.
+
+Resources: with 400 players TypeClash used about 250 MB of memory and well under one CPU core in tests. It is limited to 1 GB (`mem_limit` in `docker-compose.yml`).
+
 ### Who can use your AI (DeepSeek) key?
 Nobody can see or take the key: it exists only on the server. Players can only use the three game features (topic paragraphs, AI Coach, weak-key drills). They cannot type free prompts:
 a topic is cut to 40 plain characters and put inside a fixed instruction, and every answer is cleaned (plain ASCII, one paragraph, length-checked).

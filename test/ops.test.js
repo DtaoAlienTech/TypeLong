@@ -183,6 +183,30 @@ try {
   await sleep(300);
   ok("online cap: first N get online play, the rest wait, Bot/Solo-type features keep working, first in line is promoted");
 
+  // ---- behind a proxy: visitors are told apart by the header the proxy sets, a faked X-Forwarded-For is ignored ----
+  process.env.TRUST_PROXY_HEADER = "x-real-ip";
+  CONFIG.maxConnPerIp = 1;
+  const via = (visitor) =>
+    new Promise((resolve) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${port}`, { headers: { "X-Real-IP": visitor, "X-Forwarded-For": "6.6.6.6" } });
+      const box = { ws, closeCode: null };
+      ws.on("close", (code) => (box.closeCode = code));
+      ws.on("open", () => resolve(box));
+      ws.on("error", () => resolve(box));
+    });
+  const v1 = await via("10.0.0.1");
+  const v2 = await via("10.0.0.2"); // another visitor (same faked X-Forwarded-For) is welcome
+  const v3 = await via("10.0.0.1"); // the same visitor a second time is refused (limit 1)
+  await sleep(250);
+  assert.equal(v1.closeCode, null);
+  assert.equal(v2.closeCode, null);
+  assert.equal(v3.closeCode, 1013);
+  for (const x of [v1, v2, v3]) x.ws.close();
+  delete process.env.TRUST_PROXY_HEADER;
+  CONFIG.maxConnPerIp = 100;
+  await sleep(250);
+  ok("behind a proxy: the visitor address comes from the header the proxy sets (a faked X-Forwarded-For is ignored)");
+
   // ---- backups ----
   const reg = await open();
   reg.ws.send(JSON.stringify({ t: "register", name: "BackupTester", pin: "1234" }));

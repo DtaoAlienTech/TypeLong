@@ -1,0 +1,17 @@
+# Use this when ANOTHER reverse proxy (Nginx Proxy Manager, Traefik, Caddy...) already runs in Docker on this server
+# and owns ports 80 and 443. Do NOT start the built-in "https" profile in that case.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d --build
+#
+# TypeClash then also joins your proxy's Docker network, so the proxy can reach it as  http://typeclash:3001
+# Find that network's name with  docker network ls  and put it in .env as PROXY_NETWORK=name  (default: proxy)
+services:
+  typeclash:
+    networks:
+      - default
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-proxy}

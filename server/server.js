@@ -806,8 +806,11 @@ export function createServer(opts = {}) {
   const wss = new WebSocketServer({ server, maxPayload: 2048 });
 
   wss.on("connection", (ws, req) => {
-    // behind a proxy (Render, Fly, Cloudflare) set TRUST_PROXY=1 so limits use the real visitor address
-    const fwd = process.env.TRUST_PROXY ? String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim() : "";
+    // Behind a proxy (Render, Fly, Cloudflare, nginx...) the visitor's address is in a header. TRUST_PROXY=1 reads X-Forwarded-For; TRUST_PROXY_HEADER=x-real-ip
+    // (or cf-connecting-ip for Cloudflare) reads that header instead. Use a header your proxy OVERWRITES, otherwise a visitor
+    // could send a fake one and dodge the per-address limits.
+    const proxyHeader = (process.env.TRUST_PROXY_HEADER || "x-forwarded-for").toLowerCase();
+    const fwd = process.env.TRUST_PROXY || process.env.TRUST_PROXY_HEADER ? String(req.headers[proxyHeader] ?? "").split(",")[0].trim() : "";
     const client = {
       ws,
       id: nextId++,
