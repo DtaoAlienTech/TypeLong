@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>TypeClash - PvP Typing Race</title>
+  <meta name="description" content="Race a real opponent on the same paragraph. Live WPM, accuracy, combos and effects." />
+  <meta name="theme-color" content="#0B0D1A" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B0D1A'/%3E%3Cpath d='M7 9h18M16 9v15' stroke='%2322E4FF' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-screen="home">
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div id="vignette" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <button class="brand-mini" id="btn-brand" aria-label="Home"><i></i>TYPE<b>CLASH</b></button>
+    <div class="top-right">
+      <button class="acct" id="btn-acct" aria-label="Account">
+        <span id="acct-guest">Sign in</span>
+        <span class="acct-user" id="acct-user" hidden>
+          <svg class="coin-ico" viewBox="0 0 24 24" aria-hidden="true"><path id="acct-coin-path" fill-rule="evenodd"/></svg><b id="acct-coins">0</b>
+          <i class="rank-dot" id="acct-rank"></i><span id="acct-name"></span>
+        </span>
+      </button>
+      <div class="pill" id="online-pill" title="Server status"><span class="dot"></span><span id="online-text">connecting</span></div>
+      <button class="icon-btn" id="btn-sound" aria-label="Toggle sound" title="Sound">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="mute" d="m16 9 6 6m0-6-6 6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- HOME -->
+    <section class="screen active" id="screen-home">
+      <div class="hero">
+        <div class="logo" aria-label="TypeClash">TYPE<span>CLASH</span></div>
+        <p class="tagline">Same paragraph. Real opponent. Fastest, cleanest fingers win.</p>
+        <div class="demo" aria-hidden="true"><span id="demo-text"></span><i class="demo-caret"></i></div>
+        <label class="field">
+          <span>Your name</span>
+          <input id="name" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Enter a name" />
+        </label>
+        <button class="btn btn-primary btn-xl" id="btn-play">PLAY</button>
+        <div class="home-nav">
+          <button class="btn btn-secondary btn-sm" data-go="leaderboard">Leaderboard</button>
+          <button class="btn btn-secondary btn-sm" data-go="profile">Quests &amp; Shop</button>
+          <button class="btn btn-secondary btn-sm" data-go="dashboard">My Stats</button>
+        </div>
+        <div class="home-stats">
+          <div><b id="st-best">0</b><span>Best WPM</span></div>
+          <div><b id="st-games">0</b><span>Races</span></div>
+          <div><b id="st-wins">0</b><span>Wins</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODE SELECT -->
+    <section class="screen" id="screen-modes">
+      <div class="wrap">
+        <h2 class="title">Choose your battle</h2>
+        <div class="mode-cards" id="mode-cards">
+          <button class="mode-card active" data-mode="quick">
+            <svg viewBox="0 0 24 24" class="ico"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="currentColor"/></svg>
+            <h3>Quick Match</h3><p>Face a random online opponent</p>
+          </button>
+          <button class="mode-card" data-mode="private">
+            <svg viewBox="0 0 24 24" class="ico" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M15.5 14.7c3 0 5.5 1.8 5.5 5"/></svg>
+            <h3>Private Room</h3><p>Play a friend with a room code</p>
+          </button>
+          <button class="mode-card" data-mode="bot">
+            <svg viewBox="0 0 24 24" class="ico" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01M9 16.5h6"/></svg>
+            <h3>vs Bot</h3><p>Race an AI at your level</p>
+          </button>
+          <button class="mode-card" data-mode="solo">
+            <svg viewBox="0 0 24 24" class="ico" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            <h3>Solo Practice</h3><p>Beat your personal best</p>
+          </button>
+        </div>
+
+        <p class="full-note glass" id="full-note" hidden><b>Online play is full right now</b> (<span id="full-max">400</span> players). You can still play <b>vs Bot</b> or <b>Solo</b> while you wait. We will tell you the moment a spot opens.</p>
+
+        <div class="options glass">
+          <div class="opt-row">
+            <span class="opt-label">Paragraph</span>
+            <div class="chips" id="chips-diff" role="radiogroup">
+              <button class="chip" data-v="easy">Easy</button>
+              <button class="chip active" data-v="medium">Medium</button>
+              <button class="chip" data-v="hard">Hard</button>
+            </div>
+          </div>
+          <div class="opt-row" id="row-bot" hidden>
+            <span class="opt-label">Bot speed</span>
+            <div class="chips" id="chips-bot" role="radiogroup">
+              <button class="chip" data-v="easy">Easy <small>30</small></button>
+              <button class="chip active" data-v="medium">Medium <small>55</small></button>
+              <button class="chip" data-v="hard">Hard <small>80</small></button>
+              <button class="chip" data-v="insane">Insane <small>115</small></button>
+            </div>
+          </div>
+          <div class="opt-row" id="row-private" hidden>
+            <span class="opt-label">Room</span>
+            <div class="room-actions">
+              <button class="btn btn-secondary" id="btn-create">Create room</button>
+              <span class="or">or</span>
+              <input id="join-code" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" />
+              <button class="btn btn-secondary" id="btn-join">Join</button>
+            </div>
+          </div>
+          <div class="opt-row" id="row-chaos" hidden>
+            <span class="opt-label">Chaos</span>
+            <button class="chip toggle" id="chip-chaos" aria-pressed="false">Power-ups: OFF</button>
+            <span class="muted small" id="chaos-note">Type clean to earn Freeze, Blur and Shield. Press Tab to use. Never ranked.</span>
+          </div>
+          <div class="opt-row" id="row-topic" hidden>
+            <span class="opt-label">Topic <em class="ai-badge">AI</em></span>
+            <div class="topic-box">
+              <input id="topic" maxlength="40" placeholder="Type any topic, or leave empty for classic paragraphs" autocomplete="off" spellcheck="false" />
+              <div class="chips" id="chips-topic">
+                <button class="chip" data-v="Space travel">Space</button>
+                <button class="chip" data-v="Cricket">Cricket</button>
+                <button class="chip" data-v="Ocean life">Ocean</button>
+                <button class="chip" data-v="Coding">Coding</button>
+                <button class="chip" data-v="Ancient history">History</button>
+                <button class="chip" data-v="Street food">Food</button>
+              </div>
+            </div>
+          </div>
+          <p class="muted small ai-off" id="ai-off-note" hidden>AI topics are off. Put your DeepSeek key in the <b>.env</b> file and restart the server.</p>
+          <div class="opt-actions">
+            <button class="btn btn-ghost" id="btn-back-home">Back</button>
+            <button class="btn btn-primary" id="btn-start">Find opponent</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOBBY -->
+    <section class="screen" id="screen-lobby">
+      <div class="lobby">
+        <div class="radar" aria-hidden="true"><i></i><i></i><i></i><span class="avatar you"></span></div>
+        <h2 id="lobby-title" class="title">Searching for an opponent...</h2>
+        <p id="lobby-sub" class="muted">Paragraph: Medium</p>
+        <div id="room-code-box" class="code-box glass" hidden>
+          <span class="muted">Room code</span>
+          <div class="room-code" id="room-code">----</div>
+          <button class="btn btn-secondary btn-sm" id="btn-copy">Copy code</button>
+          <p class="muted small">Send this code to your friend. The race starts when they join.</p>
+        </div>
+        <div class="vs-row">
+          <div class="pcard you"><span class="avatar you"></span><b id="lobby-you">You</b></div>
+          <div class="vs">VS</div>
+          <div class="pcard rival"><span class="avatar rival">?</span><b>Waiting...</b></div>
+        </div>
+        <button class="btn btn-ghost" id="btn-cancel">Cancel</button>
+      </div>
+    </section>
+
+    <!-- RACE -->
+    <section class="screen" id="screen-race">
+      <div class="race">
+        <div class="race-top">
+          <button class="btn btn-ghost btn-sm" id="btn-leave">Esc &middot; Leave</button>
+          <div class="chip static" id="race-mode">Quick Match &middot; Medium</div>
+          <div class="timer"><span id="timer">0:00</span><small id="timer-limit">/ 2:00</small></div>
+        </div>
+
+        <div class="lanes glass">
+          <div class="lane you" id="lane-you">
+            <div class="lane-meta"><span class="lane-name" id="lane-you-name">You</span><span class="lane-wpm"><b id="lane-you-wpm">0</b> wpm</span></div>
+            <div class="lane-track"><div class="lane-fill"></div><div class="racer"><svg viewBox="0 0 24 24"><path d="M3 4l18 8-18 8 4-8z" fill="currentColor"/></svg></div><div class="flag"></div></div>
+          </div>
+          <div class="lane rival" id="lane-opp">
+            <div class="lane-meta"><span class="lane-name" id="lane-opp-name">Rival</span><span class="lane-wpm"><b id="lane-opp-wpm">0</b> wpm</span></div>
+            <div class="lane-track"><div class="lane-fill"></div><div class="racer"><svg viewBox="0 0 24 24"><path d="M3 4l18 8-18 8 4-8z" fill="currentColor"/></svg></div><div class="flag"></div></div>
+          </div>
+        </div>
+
+        <div class="para-card glass" id="para-card">
+          <div class="para-viewport" id="para-viewport" tabindex="-1">
+            <div class="para-inner" id="para-inner">
+              <span class="caret you" id="caret"></span>
+              <span class="caret rival" id="ghost"><i id="ghost-tag">RIVAL</i></span>
+            </div>
+          </div>
+          <div class="freeze-ov" id="freeze-ov" hidden><b>FROZEN</b><span id="freeze-count"></span></div>
+          <div class="hint" id="hint">Type the paragraph &middot; <kbd>Backspace</kbd> fixes mistakes &middot; <kbd>Ctrl</kbd>+<kbd>Backspace</kbd> deletes a word</div>
+        </div>
+
+        <div class="powerbar glass" id="powerbar" hidden>
+          <span class="pb-label">POWER-UPS</span>
+          <div class="slot" id="slot-0"></div><div class="slot" id="slot-1"></div>
+          <div class="pb-mid"><div class="charge-bar"><i id="charge-fill"></i></div><span class="pb-hint"><kbd>Tab</kbd> uses the first one &middot; 30 clean characters = 1 charge</span></div>
+        </div>
+
+        <div class="hud">
+          <div class="gauge glass">
+            <svg viewBox="0 0 200 110" aria-hidden="true">
+              <defs>
+                <linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#7C5CFF"/><stop offset="1" stop-color="#22E4FF"/></linearGradient>
+              </defs>
+              <g id="gauge-ticks"></g>
+              <path d="M20 100A80 80 0 0 1 180 100" class="g-track" />
+              <path d="M20 100A80 80 0 0 1 180 100" class="g-fill" id="g-fill" />
+              <g id="g-needle"><line x1="100" y1="100" x2="100" y2="34" /><circle cx="100" cy="100" r="6" /></g>
+            </svg>
+            <div class="g-val"><b id="wpm-val">0</b><span>WPM</span></div>
+          </div>
+          <div class="stat glass"><label>Accuracy</label><b id="acc">100%</b></div>
+          <div class="stat glass combo" id="combo-box"><label>Combo</label><b id="combo">0</b></div>
+          <div class="stat glass"><label>Progress</label><b id="prog">0%</b><div class="bar"><i id="prog-bar"></i></div></div>
+        </div>
+      </div>
+
+      <div class="countdown" id="countdown" aria-live="assertive"><span id="countdown-num"></span><i class="cd-ring"></i></div>
+    </section>
+
+    <!-- PROFILE: stats, quests, achievements, shop -->
+    <section class="screen" id="screen-profile">
+      <div class="wrap panel-screen">
+        <div class="screen-head"><button class="btn btn-ghost btn-sm" data-go="home">Back</button><h2 class="title">Profile</h2><span></span></div>
+        <div class="nudge glass" id="profile-guest" hidden>
+          <span><b>You are playing as a guest.</b> Create an account (name + PIN) to earn coins, climb the ranked ladder, finish quests and unlock achievements.</span>
+          <button class="btn btn-primary btn-sm" id="btn-profile-signin">Sign in / Create account</button>
+        </div>
+        <div id="profile-body" hidden>
+          <div class="hero-card glass" id="profile-hero"></div>
+          <div class="tiles tiles-6" id="profile-stats"></div>
+          <div class="tabs" id="profile-tabs">
+            <button class="tab active" data-tab="quests">Quests</button>
+            <button class="tab" data-tab="ach">Achievements</button>
+            <button class="tab" data-tab="shop">Shop</button>
+          </div>
+          <div id="tab-quests" class="tab-body"></div>
+          <div id="tab-ach" class="tab-body" hidden></div>
+          <div id="tab-shop" class="tab-body" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LEADERBOARD -->
+    <section class="screen" id="screen-leaderboard">
+      <div class="wrap panel-screen">
+        <div class="screen-head"><button class="btn btn-ghost btn-sm" data-go="home">Back</button><h2 class="title">Leaderboard</h2><span class="muted small" id="lb-week"></span></div>
+        <div class="tabs" id="lb-tabs">
+          <button class="tab active" data-board="elo">Ranked</button>
+          <button class="tab" data-board="wpm">Fastest</button>
+          <button class="tab" data-board="legends">Legends</button>
+        </div>
+        <div class="lb glass" id="lb-list"></div>
+        <p class="muted small center" id="lb-note"></p>
+      </div>
+    </section>
+
+    <!-- DASHBOARD: your own history (stored in this browser) -->
+    <section class="screen" id="screen-dashboard">
+      <div class="wrap panel-screen">
+        <div class="screen-head"><button class="btn btn-ghost btn-sm" data-go="home">Back</button><h2 class="title">My Stats</h2><span></span></div>
+        <div class="tiles" id="dash-tiles"></div>
+        <div class="chart-card glass">
+          <div class="chart-head"><span>WPM over your last races</span><span class="legend"><i class="you"></i><em>WPM</em></span></div>
+          <canvas id="dash-chart"></canvas>
+          <p class="muted small center" id="dash-empty" hidden>Finish a few races and your progress shows up here.</p>
+        </div>
+        <div class="dash-cols">
+          <div class="glass panel-pad">
+            <div class="panel-title">Keyboard heatmap <small class="muted">red = letters you miss most</small></div>
+            <div class="heatmap" id="heatmap"></div>
+            <div class="weak-row"><span class="muted small" id="weak-text"></span><button class="btn btn-primary btn-sm" id="btn-drill">Practice weak keys</button></div>
+          </div>
+          <div class="glass panel-pad">
+            <div class="panel-title">Daily goal</div>
+            <div class="goal"><div class="ring" id="goal-ring"><b id="goal-num">0/3</b></div><div class="goal-text"><span id="goal-sub" class="muted small"></span><span id="goal-streak"></span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="screen" id="screen-results">
+      <div class="results">
+        <div class="banner" id="banner"><h1 id="banner-title">VICTORY</h1><p id="banner-sub"></p></div>
+        <div class="tiles">
+          <div class="tile glass"><label>WPM</label><b id="r-wpm">0</b><small id="r-wpm-opp"></small></div>
+          <div class="tile glass"><label>Accuracy</label><b id="r-acc">0%</b><small id="r-acc-opp"></small></div>
+          <div class="tile glass"><label>Consistency</label><b id="r-con">0%</b><small id="r-con-sub"></small></div>
+          <div class="tile glass"><label>Score</label><b id="r-score">0</b><small id="r-score-sub"></small></div>
+        </div>
+        <div class="rewards glass" id="rewards" hidden></div>
+        <div class="nudge glass" id="nudge" hidden>
+          <span><b>Save your progress.</b> Sign in to keep coins, rank, quests and achievements.</span>
+          <button class="btn btn-primary btn-sm" id="btn-nudge-signin">Sign in / Create account</button>
+        </div>
+        <div class="chart-card glass">
+          <div class="chart-head"><span>WPM over time</span><span class="legend"><i class="you"></i><em id="lg-you">You</em><i class="rival" id="lg-opp-dot"></i><em id="lg-opp">Rival</em></span></div>
+          <canvas id="chart"></canvas>
+        </div>
+        <div class="coach glass" id="coach" hidden>
+          <div class="coach-head"><span><em class="ai-badge">AI</em> Coach</span><button class="btn btn-secondary btn-sm" id="btn-coach">Get tips</button></div>
+          <div class="coach-body" id="coach-body">Personal tips based on your speed, accuracy and the letters you missed.</div>
+        </div>
+        <div class="result-actions">
+          <button class="btn btn-ghost" id="btn-menu">Menu</button>
+          <button class="btn btn-secondary" id="btn-drill-res" hidden>Drill weak keys</button>
+          <button class="btn btn-primary" id="btn-again">Rematch</button>
+        </div>
+        <p class="muted small center" id="r-extra"></p>
+      </div>
+    </section>
+  </main>
+
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div id="toasts" role="status" aria-live="polite"></div>
+
+  <div class="modal" id="modal-auth" hidden>
+    <form class="modal-card glass auth-card" id="auth-form" autocomplete="off">
+      <div class="tabs small" id="auth-tabs"><button type="button" class="tab active" data-mode="login">Sign in</button><button type="button" class="tab" data-mode="register">Create account</button></div>
+      <label class="field"><span>Name (3-14 letters, numbers, _ . -)</span><input id="auth-name" maxlength="14" autocomplete="username" spellcheck="false" /></label>
+      <label class="field"><span>PIN (4-8 digits)</span><input id="auth-pin" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password" /></label>
+      <p class="auth-err" id="auth-err" hidden></p>
+      <p class="muted small">PIN accounts are for fun. Do not reuse a real password.</p>
+      <div class="modal-actions"><button type="button" class="btn btn-ghost" id="auth-cancel">Cancel</button><button type="submit" class="btn btn-primary" id="auth-submit">Sign in</button></div>
+    </form>
+  </div>
+
+  <div class="legend-pop" id="legend-pop" hidden>
+    <div class="legend-card">
+      <div class="legend-rays" aria-hidden="true"></div>
+      <div class="legend-badge big" id="legend-badge"></div>
+      <small>LEGENDARY QUEST COMPLETE</small>
+      <h2 id="legend-name"></h2>
+      <p id="legend-desc"></p>
+      <b class="legend-coins" id="legend-coins"></b>
+      <span class="muted small">Your badge now glows next to your name on the leaderboard. Click to continue.</span>
+    </div>
+  </div>
+
+  <div class="modal" id="busy" hidden>
+    <div class="modal-card glass busy-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <h3 id="busy-title">Writing your paragraph...</h3>
+      <p class="muted small" id="busy-sub">This takes a few seconds.</p>
+      <div class="modal-actions"><button class="btn btn-ghost btn-sm" id="busy-cancel">Cancel</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-leave" hidden>
+    <div class="modal-card glass">
+      <h3>Leave the race?</h3>
+      <p class="muted" id="leave-text">You will lose this match.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="leave-stay">Stay</button>
+        <button class="btn btn-danger" id="leave-go">Leave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- hidden input: brings up the keyboard on phones/tablets -->
+  <input id="kb" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Typing input" />
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "typeclash",
+  "version": "1.0.0",
+  "description": "TypeClash - PvP paragraph typing race game",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "test": "node test/engine.test.js && node test/client.test.js && node test/economy.test.js && node test/server.test.js && node test/ai.test.js && node test/accounts.test.js && node test/ops.test.js",
+    "ai:check": "node scripts/ai-check.js",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f typeclash",
+    "loadtest": "node scripts/loadtest.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "license": "MIT"
+}

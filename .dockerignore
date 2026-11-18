@@ -1,0 +1,14 @@
+node_modules
+data
+design
+test
+.env
+.env.*
+!.env.example
+*.log
+*.tar.gz
+.git
+Dockerfile
+docker-compose.yml
+Caddyfile
+PLAN.md

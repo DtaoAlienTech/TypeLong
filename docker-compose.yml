@@ -1,0 +1,56 @@
+# Start:   docker compose up -d --build        Stop: docker compose down
+# Logs:    docker compose logs -f typeclash    Data: ./data (the database + daily backups)
+# Public HTTPS (optional): set DOMAIN and TRUST_PROXY=1 in .env, then
+#          docker compose --profile https up -d --build
+name: typeclash
+
+services:
+  typeclash:
+    build: .
+    image: typeclash:latest
+    container_name: typeclash
+    restart: unless-stopped        # comes back by itself after a crash or a reboot
+    init: true                     # proper signal handling so "docker stop" shuts down gracefully
+    stop_grace_period: 10s
+    env_file: .env                 # DEEPSEEK_API_KEY and other settings (never baked into the image)
+    environment:
+      PORT: "3001"
+      DB_PATH: /app/data/typeclash.db
+    ports:
+      - "${BIND_ADDR:-0.0.0.0}:${HOST_PORT:-3001}:3001"   # BIND_ADDR=127.0.0.1 keeps this port private (use that with HTTPS)
+    volumes:
+      - ./data:/app/data
+    mem_limit: 1g
+    ulimits:
+      nofile: { soft: 65536, hard: 65536 }   # room for thousands of WebSocket connections
+    read_only: true                # the container cannot change its own files...
+    tmpfs:
+      - /tmp                       # ...except temporary space
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Optional HTTPS front door (automatic certificates). Only starts with:  --profile https
+  caddy:
+    profiles: ["https"]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: "${DOMAIN:-localhost}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      typeclash:
+        condition: service_healthy
+
+volumes:
+  caddy_data: {}
+  caddy_config: {}

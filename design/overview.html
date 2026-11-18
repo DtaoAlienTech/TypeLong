@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" /><title>TypeClash - all screens</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg:#0B0D1A; --border:#2C3366; --text:#E8EBFF; --dim:#8089C0; --you:#22E4FF; --rival:#FF3D8B; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 40px; background: var(--bg); color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; width: 1800px; }
+  h1 { margin: 0 0 4px; font-size: 44px; letter-spacing: .04em; }
+  h1 span { background: linear-gradient(90deg, var(--you), #7C5CFF 55%, var(--rival)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { color: var(--dim); margin: 0 0 8px; font-size: 16px; }
+  h2 { margin: 40px 0 14px; font-size: 13px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); font-weight: 500; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; align-items: start; }
+  .mgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 22px; align-items: start; }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; border-radius: 12px; border: 1px solid var(--border); }
+  figcaption { margin-top: 8px; font-size: 14px; color: var(--dim); }
+  figcaption b { color: var(--text); font-weight: 700; margin-right: 6px; }
+</style></head><body>
+  <h1>TYPE<span>CLASH</span></h1>
+  <p class="sub">Every screen, captured from the real game. Desktop 1440 x 900, phone 390 x 844.</p>
+  <h2>Core game</h2>
+  <div class="grid">
+    <figure><img src="screens/01-home.png" loading="eager"><figcaption><b>01</b>Home</figcaption></figure>
+    <figure><img src="screens/02-mode-select-quick.png" loading="eager"><figcaption><b>02</b>Mode select: Quick Match</figcaption></figure>
+    <figure><img src="screens/03-mode-select-private.png" loading="eager"><figcaption><b>03</b>Mode select: Private Room</figcaption></figure>
+    <figure><img src="screens/04-mode-select-bot.png" loading="eager"><figcaption><b>04</b>Mode select: vs Bot</figcaption></figure>
+    <figure><img src="screens/05-lobby-searching.png" loading="eager"><figcaption><b>05</b>Lobby: searching</figcaption></figure>
+    <figure><img src="screens/06-lobby-room-code.png" loading="eager"><figcaption><b>06</b>Lobby: room code</figcaption></figure>
+    <figure><img src="screens/07-countdown.png" loading="eager"><figcaption><b>07</b>Countdown</figcaption></figure>
+    <figure><img src="screens/08-race-combo-x25.png" loading="eager"><figcaption><b>08</b>Race: COMBO x25</figcaption></figure>
+    <figure><img src="screens/09-race-mistake.png" loading="eager"><figcaption><b>09</b>Race: mistake</figcaption></figure>
+    <figure><img src="screens/10-leave-confirm.png" loading="eager"><figcaption><b>10</b>Leave confirm</figcaption></figure>
+    <figure><img src="screens/11-race-online.png" loading="eager"><figcaption><b>11</b>Race: online</figcaption></figure>
+    <figure><img src="screens/12-results-victory.png" loading="eager"><figcaption><b>12</b>Results: victory</figcaption></figure>
+    <figure><img src="screens/13-results-solo.png" loading="eager"><figcaption><b>13</b>Results: solo</figcaption></figure>
+    <figure><img src="screens/14-results-defeat.png" loading="eager"><figcaption><b>14</b>Results: defeat</figcaption></figure>
+  </div>
+  <h2>AI (DeepSeek)</h2>
+  <div class="grid">
+    <figure><img src="screens/15-ai-topic-picker.png" loading="eager"><figcaption><b>15</b>AI topic picker</figcaption></figure>
+    <figure><img src="screens/16-ai-writing.png" loading="eager"><figcaption><b>16</b>AI is writing your paragraph</figcaption></figure>
+    <figure><img src="screens/17-results-ai-coach.png" loading="eager"><figcaption><b>17</b>AI Coach tips</figcaption></figure>
+  </div>
+  <h2>Accounts, coins, quests, achievements, shop</h2>
+  <div class="grid">
+    <figure><img src="screens/18-auth-modal.png" loading="eager"><figcaption><b>18</b>Sign in / create account</figcaption></figure>
+    <figure><img src="screens/19-home-signed-in.png" loading="eager"><figcaption><b>19</b>Home, signed in (coins + name)</figcaption></figure>
+    <figure><img src="screens/20-rewards-ranked-win.png" loading="eager"><figcaption><b>20</b>Ranked win: coins, Elo, quests, achievements</figcaption></figure>
+    <figure><img src="screens/21-profile-quests.png" loading="eager"><figcaption><b>21</b>Profile: hard weekly quest in progress</figcaption></figure>
+    <figure><img src="screens/22-legend-unlocked.png" loading="eager"><figcaption><b>22</b>LEGENDARY: hard quest complete</figcaption></figure>
+    <figure><img src="screens/23-rewards-legend.png" loading="eager"><figcaption><b>23</b>Rewards with the legend badge</figcaption></figure>
+    <figure><img src="screens/24-profile-quests-complete.png" loading="eager"><figcaption><b>24</b>Profile: hard quest complete</figcaption></figure>
+    <figure><img src="screens/25-profile-achievements.png" loading="eager"><figcaption><b>25</b>Achievements + legend badges</figcaption></figure>
+    <figure><img src="screens/26-profile-shop.png" loading="eager"><figcaption><b>26</b>Shop: caret skins + name styles</figcaption></figure>
+  </div>
+  <h2>Leaderboard and stats</h2>
+  <div class="grid">
+    <figure><img src="screens/27-leaderboard-ranked.png" loading="eager"><figcaption><b>27</b>Leaderboard: Ranked</figcaption></figure>
+    <figure><img src="screens/28-leaderboard-fastest.png" loading="eager"><figcaption><b>28</b>Leaderboard: Fastest</figcaption></figure>
+    <figure><img src="screens/29-leaderboard-legends.png" loading="eager"><figcaption><b>29</b>Leaderboard: Legends (animated badges)</figcaption></figure>
+    <figure><img src="screens/30-dashboard.png" loading="eager"><figcaption><b>30</b>My Stats: heatmap, chart, daily goal</figcaption></figure>
+    <figure><img src="screens/31-drill-race.png" loading="eager"><figcaption><b>31</b>Weak-key drill</figcaption></figure>
+  </div>
+  <h2>Chaos mode (power-ups)</h2>
+  <div class="grid">
+    <figure><img src="screens/32-chaos-charged.png" loading="eager"><figcaption><b>32</b>Power-up charged</figcaption></figure>
+    <figure><img src="screens/33-chaos-frozen.png" loading="eager"><figcaption><b>33</b>Frozen (rival's view)</figcaption></figure>
+    <figure><img src="screens/33b-chaos-freeze-hit.png" loading="eager"><figcaption><b>33B</b>Freeze hit (attacker's view)</figcaption></figure>
+    <figure><img src="screens/34-chaos-blur.png" loading="eager"><figcaption><b>34</b>Blurred</figcaption></figure>
+    <figure><img src="screens/35-chaos-shield.png" loading="eager"><figcaption><b>35</b>Shield up</figcaption></figure>
+  </div>
+  <h2>Online cap (server full)</h2>
+  <div class="grid">
+    <figure><img src="screens/36-server-full.png" loading="eager"><figcaption><b>36</b>Online play full: Quick Match and Private Room locked, Bot and Solo still open</figcaption></figure>
+  </div>
+
+  <h2>Phone</h2>
+  <div class="mgrid">
+    <figure><img src="mobile/m1-home.png" loading="eager"><figcaption><b>M1</b>Home</figcaption></figure>
+    <figure><img src="mobile/m2-mode-select.png" loading="eager"><figcaption><b>M2</b>Mode select</figcaption></figure>
+    <figure><img src="mobile/m3-countdown.png" loading="eager"><figcaption><b>M3</b>Countdown</figcaption></figure>
+    <figure><img src="mobile/m4-race.png" loading="eager"><figcaption><b>M4</b>Race vs bot</figcaption></figure>
+    <figure><img src="mobile/m5-results.png" loading="eager"><figcaption><b>M5</b>Results</figcaption></figure>
+    <figure><img src="mobile/m6-ai-topic.png" loading="eager"><figcaption><b>M6</b>AI topic picker</figcaption></figure>
+    <figure><img src="mobile/m6b-home-signed-in.png" loading="eager"><figcaption><b>M6B</b>Home, signed in</figcaption></figure>
+    <figure><img src="mobile/m7-profile.png" loading="eager"><figcaption><b>M7</b>Profile + hard quest</figcaption></figure>
+    <figure><img src="mobile/m8-shop.png" loading="eager"><figcaption><b>M8</b>Shop</figcaption></figure>
+    <figure><img src="mobile/m9-leaderboard.png" loading="eager"><figcaption><b>M9</b>Leaderboard</figcaption></figure>
+    <figure><img src="mobile/m9b-leaderboard-legends.png" loading="eager"><figcaption><b>M9B</b>Legends board</figcaption></figure>
+    <figure><img src="mobile/m10-dashboard.png" loading="eager"><figcaption><b>M10</b>My Stats</figcaption></figure>
+  </div>
+</body></html>
